@@ -21,103 +21,58 @@ DCSP_CORE::~DCSP_CORE()
 
 
 template<typename T>
+//图片转数组
 char* BlobFromImage(cv::Mat& iImg, T& iBlob)
 {
 	int channels = iImg.channels();
 	int imgHeight = iImg.rows;
 	int imgWidth = iImg.cols;
-	//std::cout << channels << std::endl;
-	//std::cout << imgHeight << std::endl;
-	//std::cout << imgWidth << std::endl;
-	for (int c = 0; c < channels; c++)
-	{
-		for (int h = 0; h < imgHeight; h++)
-		{
-			for (int w = 0; w < imgWidth; w++)
-			{
-				iBlob[c * imgWidth * imgHeight + h * imgWidth + w] = (std::remove_pointer<T>::type)((iImg.at<cv::Vec3b>(h, w)[c]) / 255.0f);
-			}
-		}
-	}
 
-	/*for (int w = 0; w < 10; w++) {
-		std::cout << "iImg[0 * imgWidth * imgHeight + 0 * imgWidth + " << w << "] = "
-			<< iBlob[0 * imgWidth * imgHeight + 0 * imgWidth + w] << std::endl;
-	}*/
+	iImg.convertTo(iImg, CV_32FC3);
 
-	cv::Mat paddedImage(224, 224, CV_8UC3, cv::Scalar(0, 0, 0));
-
-	// Copy the original image into the center of the padded image
-	cv::Rect roi((224 - imgWidth) / 2, (224 - imgHeight) / 2, imgWidth, imgHeight);
-
-	iImg.copyTo(paddedImage(roi));
-
-	// Convert to float and normalize
-	paddedImage.convertTo(paddedImage, CV_32FC3);
-
+	// 设置imagenet分类任务均值与方差
 	cv::Scalar mean(0.485, 0.456, 0.406);
 	cv::Scalar stdDev(0.229, 0.224, 0.225);
-	paddedImage /= 255.0f;
-	paddedImage -= mean;
-	paddedImage /= stdDev;
+	// 先归一化到0~1
+	iImg /= 255.0f;
+	// 再根据imagenet均值方差归一化
+	iImg -= mean;
+	iImg /= stdDev;
 
-	/*for (int w = 0; w < 10; w++) {
-		std::cout << "paddedImage[0 * imgWidth * imgHeight + 0 * imgWidth + " << w << "] = "
-			<< paddedImage.at<cv::Vec3f>(0, w)[0] << std::endl;
-	}
-
-	std::ifstream file("E:/yolov8/examples/tensor_data.bin", std::ios::binary);
-	if (!file.is_open()) {
-		std::cerr << "Failed to open file." << std::endl;
-	}
-	std::vector<float> data(1 * 3 * 224 * 224);
-	file.read(reinterpret_cast<char*>(data.data()), 1.0 * 3 * 224 * 224 * sizeof(float));
-	file.close();*/
-
-	// ��ȡ���ݲ���ӡ
-	//for (int i = 0; i < 10; i++) {
-	//	std::cout << data[i] << " ";
-	//	std::cout << std::endl;
-	//}
-
-
+	// 图片转数组
 	for (int c = 0; c < channels; c++)
 	{
 		for (int h = 0; h < imgHeight; h++)
 		{
 			for (int w = 0; w < imgWidth; w++)
 			{
-				//iBlob[c * imgWidth * imgHeight + h * imgWidth + w] = (std::remove_pointer<T>::type)((iImg.at<cv::Vec3b>(h, w)[c]) / 255.0f);
-				iBlob[c * imgWidth * imgHeight + h * imgWidth + w] = (std::remove_pointer<T>::type)((paddedImage.at<cv::Vec3f>(h, w)[c]));
-				//iBlob[c * imgWidth * imgHeight + h * imgWidth + w] = data[c * imgWidth * imgHeight + h * imgWidth + w];
+				iBlob[c * imgWidth * imgHeight + h * imgWidth + w] = (std::remove_pointer<T>::type)((iImg.at<cv::Vec3f>(h, w)[c]));
 			}
 		}
 	}
-
-	//for (int w = 0; w < 10; w++) {
-	//	std::cout << "iBlob[0 * imgWidth * imgHeight + 0 * imgWidth + " << w << "] = "
-	//		<< iBlob[0 * imgWidth * imgHeight + 0 * imgWidth + w] << std::endl;
-	//}
 
 	return RET_OK;
 }
 
-
+// 图片预处理
 char* PreProcess(cv::Mat& iImg, std::vector<int> iImgSize, cv::Mat& oImg)
 {
 	cv::Mat img = iImg.clone();
+	// resize图像使满足网络输入
 	cv::resize(iImg, oImg, cv::Size(iImgSize.at(0), iImgSize.at(1)));
 	if (img.channels() == 1)
 	{
+		// 若是单通道图，转3通道
 		cv::cvtColor(oImg, oImg, cv::COLOR_GRAY2BGR);
 	}
+	// BGR转RGB
 	cv::cvtColor(oImg, oImg, cv::COLOR_BGR2RGB);
-	
+
 	return RET_OK;
 }
 
 
-char* DCSP_CORE::CreateSession(DCSP_INIT_PARAM &iParams)
+char* DCSP_CORE::CreateSession(DCSP_INIT_PARAM& iParams)
 {
 	char* Ret = RET_OK;
 	std::regex pattern("[\u4e00-\u9fa5]");
@@ -141,11 +96,9 @@ char* DCSP_CORE::CreateSession(DCSP_INIT_PARAM &iParams)
 			cudaEnable = iParams.CudaEnable;
 			OrtCUDAProviderOptions cudaOption;
 			cudaOption.device_id = 0;
-			std::cout << "success" << std::endl;
 			sessionOption.AppendExecutionProvider_CUDA(cudaOption);
 			//OrtOpenVINOProviderOptions ovOption;
 			//sessionOption.AppendExecutionProvider_OpenVINO(ovOption);
-			std::cout << "success" << std::endl;
 		}
 		sessionOption.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
 		sessionOption.SetIntraOpNumThreads(iParams.IntraOpNumThreads);
@@ -157,7 +110,7 @@ char* DCSP_CORE::CreateSession(DCSP_INIT_PARAM &iParams)
 		const wchar_t* modelPath = wide_cstr;
 		session = new Ort::Session(env, modelPath, sessionOption);
 
-		
+
 
 		Ort::AllocatorWithDefaultOptions allocator;
 		size_t inputNodesNum = session->GetInputCount();
@@ -179,7 +132,6 @@ char* DCSP_CORE::CreateSession(DCSP_INIT_PARAM &iParams)
 		}
 		options = Ort::RunOptions{ nullptr };
 		WarmUpSession();
-		//std::cout << OrtGetApiBase()->GetVersionString() << std::endl;	//1.15.1
 		Ret = RET_OK;
 		return Ret;
 	}
@@ -198,8 +150,8 @@ char* DCSP_CORE::CreateSession(DCSP_INIT_PARAM &iParams)
 
 }
 
-
-char* DCSP_CORE::RunSession(cv::Mat &iImg, std::vector<DCSP_RESULT>& oResult)
+// 推理总流程：包括前处理-推理-后处理
+char* DCSP_CORE::RunSession(cv::Mat& iImg, std::vector<DCSP_RESULT>& oResult)
 {
 #ifdef benchmark
 	clock_t starttime_1 = clock();
@@ -219,58 +171,37 @@ char* DCSP_CORE::RunSession(cv::Mat &iImg, std::vector<DCSP_RESULT>& oResult)
 }
 
 
+// 推理过程
 template<typename N>
 char* DCSP_CORE::TensorProcess(clock_t& starttime_1, cv::Mat& iImg, N& blob, std::vector<int64_t>& inputNodeDims, std::vector<DCSP_RESULT>& oResult)
 {
+	// 创建输入tensor
 	Ort::Value inputTensor = Ort::Value::CreateTensor<std::remove_pointer<N>::type>(Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU), blob, 3 * imgSize.at(0) * imgSize.at(1), inputNodeDims.data(), inputNodeDims.size());
 #ifdef benchmark
 	clock_t starttime_2 = clock();
 #endif // benchmark
+	// 推理结果
 	auto outputTensor = session->Run(options, inputNodeNames.data(), &inputTensor, 1, outputNodeNames.data(), outputNodeNames.size());
 #ifdef benchmark
 	clock_t starttime_3 = clock();
 #endif // benchmark
 	Ort::TypeInfo typeInfo = outputTensor.front().GetTypeInfo();
 	auto tensor_info = typeInfo.GetTensorTypeAndShapeInfo();
+	// outputNodeDims存储了输出结果的维度
+	// output存储了网络输出结果
 	std::vector<int64_t>outputNodeDims = tensor_info.GetShape();
 	std::remove_pointer<N>::type* output = outputTensor.front().GetTensorMutableData<std::remove_pointer<N>::type>();
 
-
-	//���ά��
-	//std::cout << outputNodeDims[0] << std::endl;
-	//std::cout << outputNodeDims[1] << std::endl;
-	/*for (int i = 1; i <= 1000; i++) {
-		if (output[i] > 0.1) {
-			std::cout << i << std::endl;
-		}
-	}*/
-	//float max = 0;
-	//int maxidx = 0;
-	//float sum = 0;
-	//for (int i = 0; i < 1000; i++) {
-	//	sum += output[i];
-	//	if (output[i] > max) {
-	//		max = output[i];
-	//		maxidx = i;
-	//	}
-	//	/*std::cout << output[i] << " ";
-	//	if (i%10 == 0) {
-	//		std::cout << std::endl;
-	//	}*/
-	//}
-	//�������ֵ
-	//std::cout << sum << std::endl;
-	//std::cout << max << std::endl;
-	//std::cout << maxidx << std::endl;
-
 	delete blob;
+	// 根据modelType采取不同的后处理方式
 	switch (modelType)
 	{
+		// yolov8检测模型的后处理（官方）
 	case 1:
 	{
 		int strideNum = outputNodeDims[2];
 		int signalResultNum = outputNodeDims[1];
-		std::vector<int> class_ids; 
+		std::vector<int> class_ids;
 		std::vector<float> confidences;
 		std::vector<cv::Rect> boxes;
 		cv::Mat rowData(signalResultNum, strideNum, CV_32F, output);
@@ -338,12 +269,13 @@ char* DCSP_CORE::TensorProcess(clock_t& starttime_1, cv::Mat& iImg, N& blob, std
 
 		break;
 	}
+	// yolov8分类模型的后处理（测试）
 	case 3:
 	{
-		//����
 		std::cout << "ng: " << output[0] << std::endl;
 		std::cout << "ok: " << output[1] << std::endl;
 #ifdef benchmark
+		// 统计各个过程所耗时长
 		clock_t starttime_4 = clock();
 		double pre_process_time = (double)(starttime_2 - starttime_1) / CLOCKS_PER_SEC * 1000;
 		double process_time = (double)(starttime_3 - starttime_2) / CLOCKS_PER_SEC * 1000;
@@ -390,7 +322,7 @@ char* DCSP_CORE::WarmUpSession()
 
 	return Ret;
 }
-
+// 释放onnx模型
 void DCSP_CORE::DestroySession()
 {
 	if (session) {
