@@ -8,7 +8,7 @@
 
 void file_iterator(DCSP_CORE*& p)
 {
-	std::filesystem::path img_path = R"(E:/yolov8/examples/samples/test/mix)";
+	std::filesystem::path img_path = R"(E:/YOLOv8-ONNXRuntime-CPP/samples/test/ok/)";
 	//std::filesystem::path img_path = R"(E:/yolov8/examples/samples)";
 	int k = 0;
 	for (auto& i : std::filesystem::directory_iterator(img_path))
@@ -28,21 +28,23 @@ void file_iterator(DCSP_CORE*& p)
 			cv::imshow("TEST_ORIGIN", img);
 			cv::waitKey(0);
 			cv::destroyAllWindows();
-			cv::imwrite("E:/yolov8/examples/samples/output/" + std::to_string(k) + ".jpg", img);
+			cv::imwrite("E:/YOLOv8-ONNXRuntime-CPP/examples/samples/output/" + std::to_string(k) + ".jpg", img);
 			
 		}
 	}
 }
 
 
+
 int main()
 {
+
 	DCSP_CORE* p1 = new DCSP_CORE;
-	std::string model_path = "E:/yolov8/examples/samples/best.onnx";
-	DCSP_INIT_PARAM params{ model_path, YOLO_CLS_V8, {224, 224}, 2, false };
+	std::string model_path = "E:/YOLOv8-ONNXRuntime-CPP/samples/best.onnx";
+	DCSP_INIT_PARAM params{ model_path, YOLO_CLS_V8, {224, 224}, 2, true };
 	//DCSP_INIT_PARAM params{ model_path, YOLO_ORIGIN_V8, {640, 640}, 80, 0.1, 0.5, false };
 
-	/*const int N = 1000;
+	/*const int N = 1000;    //测试模型加载与释放
 	for (int i = 0; i < N; i++) {
 		char* ret = p1->CreateSession(params);
 		file_iterator(p1);
@@ -50,6 +52,7 @@ int main()
 	}*/
 	char* ret = p1->CreateSession(params);
 	file_iterator(p1);
+	p1->DestroySession();
 
 
 	return 0;

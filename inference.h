@@ -27,9 +27,9 @@ typedef struct _DCSP_INIT_PARAM
 {
 	std::string								ModelPath;
 	MODEL_TYPE								ModelType = YOLO_ORIGIN_V8;
-	std::vector<int>						imgSize={640, 640};
+	std::vector<int>						imgSize = { 640, 640 };
 
-	int										classesNum=80;
+	int										classesNum = 80;
 	float									RectConfidenceThreshold = 0.6;
 	float									iouThreshold = 0.5;
 	bool									CudaEnable = true;
@@ -53,10 +53,10 @@ public:
 	~DCSP_CORE();
 
 public:
-	char* CreateSession(DCSP_INIT_PARAM &iParams);
+	char* CreateSession(DCSP_INIT_PARAM& iParams);
 	void DestroySession();
 
-	char* RunSession(cv::Mat &iImg, std::vector<DCSP_RESULT>& oResult);
+	char* RunSession(cv::Mat& iImg, std::vector<DCSP_RESULT>& oResult);
 
 
 	char* WarmUpSession();
@@ -68,14 +68,14 @@ public:
 
 private:
 	Ort::Env				env;
-	Ort::Session*			session;
+	Ort::Session* session;
 	bool					cudaEnable;
 	Ort::RunOptions			options;
 	std::vector<const char*> inputNodeNames;
 	std::vector<const char*> outputNodeNames;
 
 
-    int						classesNum;
+	int						classesNum;
 	MODEL_TYPE				modelType;
 	std::vector<int>		imgSize;
 	float					rectConfidenceThreshold;

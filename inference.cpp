@@ -21,7 +21,7 @@ DCSP_CORE::~DCSP_CORE()
 
 
 template<typename T>
-//å›¾ç‰‡è½¬æ•°ç»„
+//Í¼Æ¬×ªÊı×é
 char* BlobFromImage(cv::Mat& iImg, T& iBlob)
 {
 	int channels = iImg.channels();
@@ -30,16 +30,16 @@ char* BlobFromImage(cv::Mat& iImg, T& iBlob)
 
 	iImg.convertTo(iImg, CV_32FC3);
 
-	// è®¾ç½®imagenetåˆ†ç±»ä»»åŠ¡å‡å€¼ä¸æ–¹å·®
+	// ÉèÖÃimagenet·ÖÀàÈÎÎñ¾ùÖµÓë·½²î
 	cv::Scalar mean(0.485, 0.456, 0.406);
 	cv::Scalar stdDev(0.229, 0.224, 0.225);
-	// å…ˆå½’ä¸€åŒ–åˆ°0~1
+	// ÏÈ¹éÒ»»¯µ½0~1
 	iImg /= 255.0f;
-	// å†æ ¹æ®imagenetå‡å€¼æ–¹å·®å½’ä¸€åŒ–
+	// ÔÙ¸ù¾İimagenet¾ùÖµ·½²î¹éÒ»»¯
 	iImg -= mean;
 	iImg /= stdDev;
 
-	// å›¾ç‰‡è½¬æ•°ç»„
+	// Í¼Æ¬×ªÊı×é
 	for (int c = 0; c < channels; c++)
 	{
 		for (int h = 0; h < imgHeight; h++)
@@ -54,18 +54,18 @@ char* BlobFromImage(cv::Mat& iImg, T& iBlob)
 	return RET_OK;
 }
 
-// å›¾ç‰‡é¢„å¤„ç†
+// Í¼Æ¬Ô¤´¦Àí
 char* PreProcess(cv::Mat& iImg, std::vector<int> iImgSize, cv::Mat& oImg)
 {
 	cv::Mat img = iImg.clone();
-	// resizeå›¾åƒä½¿æ»¡è¶³ç½‘ç»œè¾“å…¥
+	// resizeÍ¼ÏñÊ¹Âú×ãÍøÂçÊäÈë
 	cv::resize(iImg, oImg, cv::Size(iImgSize.at(0), iImgSize.at(1)));
 	if (img.channels() == 1)
 	{
-		// è‹¥æ˜¯å•é€šé“å›¾ï¼Œè½¬3é€šé“
+		// ÈôÊÇµ¥Í¨µÀÍ¼£¬×ª3Í¨µÀ
 		cv::cvtColor(oImg, oImg, cv::COLOR_GRAY2BGR);
 	}
-	// BGRè½¬RGB
+	// BGR×ªRGB
 	cv::cvtColor(oImg, oImg, cv::COLOR_BGR2RGB);
 
 	return RET_OK;
@@ -150,7 +150,7 @@ char* DCSP_CORE::CreateSession(DCSP_INIT_PARAM& iParams)
 
 }
 
-// æ¨ç†æ€»æµç¨‹ï¼šåŒ…æ‹¬å‰å¤„ç†-æ¨ç†-åå¤„ç†
+// ÍÆÀí×ÜÁ÷³Ì£º°üÀ¨Ç°´¦Àí-ÍÆÀí-ºó´¦Àí
 char* DCSP_CORE::RunSession(cv::Mat& iImg, std::vector<DCSP_RESULT>& oResult)
 {
 #ifdef benchmark
@@ -171,32 +171,32 @@ char* DCSP_CORE::RunSession(cv::Mat& iImg, std::vector<DCSP_RESULT>& oResult)
 }
 
 
-// æ¨ç†è¿‡ç¨‹
+// ÍÆÀí¹ı³Ì
 template<typename N>
 char* DCSP_CORE::TensorProcess(clock_t& starttime_1, cv::Mat& iImg, N& blob, std::vector<int64_t>& inputNodeDims, std::vector<DCSP_RESULT>& oResult)
 {
-	// åˆ›å»ºè¾“å…¥tensor
+	// ´´½¨ÊäÈëtensor
 	Ort::Value inputTensor = Ort::Value::CreateTensor<std::remove_pointer<N>::type>(Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU), blob, 3 * imgSize.at(0) * imgSize.at(1), inputNodeDims.data(), inputNodeDims.size());
 #ifdef benchmark
 	clock_t starttime_2 = clock();
 #endif // benchmark
-	// æ¨ç†ç»“æœ
+	// ÍÆÀí½á¹û
 	auto outputTensor = session->Run(options, inputNodeNames.data(), &inputTensor, 1, outputNodeNames.data(), outputNodeNames.size());
 #ifdef benchmark
 	clock_t starttime_3 = clock();
 #endif // benchmark
 	Ort::TypeInfo typeInfo = outputTensor.front().GetTypeInfo();
 	auto tensor_info = typeInfo.GetTensorTypeAndShapeInfo();
-	// outputNodeDimså­˜å‚¨äº†è¾“å‡ºç»“æœçš„ç»´åº¦
-	// outputå­˜å‚¨äº†ç½‘ç»œè¾“å‡ºç»“æœ
+	// outputNodeDims´æ´¢ÁËÊä³ö½á¹ûµÄÎ¬¶È
+	// output´æ´¢ÁËÍøÂçÊä³ö½á¹û
 	std::vector<int64_t>outputNodeDims = tensor_info.GetShape();
 	std::remove_pointer<N>::type* output = outputTensor.front().GetTensorMutableData<std::remove_pointer<N>::type>();
 
 	delete blob;
-	// æ ¹æ®modelTypeé‡‡å–ä¸åŒçš„åå¤„ç†æ–¹å¼
+	// ¸ù¾İmodelType²ÉÈ¡²»Í¬µÄºó´¦Àí·½Ê½
 	switch (modelType)
 	{
-		// yolov8æ£€æµ‹æ¨¡å‹çš„åå¤„ç†ï¼ˆå®˜æ–¹ï¼‰
+		// yolov8¼ì²âÄ£ĞÍµÄºó´¦Àí£¨¹Ù·½£©
 	case 1:
 	{
 		int strideNum = outputNodeDims[2];
@@ -269,13 +269,13 @@ char* DCSP_CORE::TensorProcess(clock_t& starttime_1, cv::Mat& iImg, N& blob, std
 
 		break;
 	}
-	// yolov8åˆ†ç±»æ¨¡å‹çš„åå¤„ç†ï¼ˆæµ‹è¯•ï¼‰
+	// yolov8·ÖÀàÄ£ĞÍµÄºó´¦Àí£¨²âÊÔ£©
 	case 3:
 	{
 		std::cout << "ng: " << output[0] << std::endl;
 		std::cout << "ok: " << output[1] << std::endl;
 #ifdef benchmark
-		// ç»Ÿè®¡å„ä¸ªè¿‡ç¨‹æ‰€è€—æ—¶é•¿
+		// Í³¼Æ¸÷¸ö¹ı³ÌËùºÄÊ±³¤
 		clock_t starttime_4 = clock();
 		double pre_process_time = (double)(starttime_2 - starttime_1) / CLOCKS_PER_SEC * 1000;
 		double process_time = (double)(starttime_3 - starttime_2) / CLOCKS_PER_SEC * 1000;
@@ -322,7 +322,7 @@ char* DCSP_CORE::WarmUpSession()
 
 	return Ret;
 }
-// é‡Šæ”¾onnxæ¨¡å‹
+// ÊÍ·ÅonnxÄ£ĞÍ
 void DCSP_CORE::DestroySession()
 {
 	if (session) {
